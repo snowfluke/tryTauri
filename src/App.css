@@ -1,0 +1,28 @@
+.container {
+  width: 80%;
+  margin: 0 auto;
+}
+
+.title {
+  text-align: center;
+}
+
+.box {
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.box1{
+  border-left: 5px solid #f87171;
+}
+
+.box1:hover {
+  background-color: #fecaca;
+}
+
+.App {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px
+}
