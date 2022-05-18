@@ -1,4 +1,8 @@
+//@ts-check
+
 import { useState } from "react";
+import { db } from "./db";
+import { doc, setDoc, serverTimestamp, getFirestore } from "firebase/firestore";
 const $ = (el) => document.querySelector(el);
 
 function App() {
@@ -32,10 +36,18 @@ function App() {
       content: "Program perulangan teks",
       color: "border-l-indigo-400 hover:bg-indigo-200",
     },
+    {
+      content: "Program pendataan mahasiswa",
+      color: "border-l-orange-400 hover:bg-orange-200",
+    },
+    {
+      content: "Coming soon",
+      color: "border-l-lime-400 hover:bg-lime-200",
+    },
   ];
 
   const initialRender = () => (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-4 gap-4">
       {praktikum.map((el, id) => (
         <div
           key={id}
@@ -575,6 +587,106 @@ function App() {
     );
   };
 
+  const pr7 = () => {
+    return (
+      <TemplatePr
+        title={"Program Pendataan Mahasiswa"}
+        color={{ a1: "bg-orange-50", a2: "bg-orange-300 text-orange-800" }}
+      >
+        <form className="grid grid-cols-2 gap-2">
+          <label htmlFor="txtnim">NIM</label>
+          <input
+            required
+            className="bg-orange-100 p-1 px-2 rounded-md outline-none selection:bg-orange-200"
+            type="text"
+            id="txtnim"
+          />
+          <label htmlFor="txtnama">Nama</label>
+          <input
+            required
+            className="bg-orange-100 p-1 px-2 rounded-md outline-none selection:bg-orange-200"
+            type="text"
+            id="txtnama"
+          />
+          <label htmlFor="txtalamat">Alamat</label>
+          <input
+            required
+            className="bg-orange-100 p-1 px-2 rounded-md outline-none selection:bg-orange-200"
+            type="text"
+            id="txtalamat"
+          />
+          <label htmlFor="txthp">No. HP</label>
+          <input
+            required
+            className="bg-orange-100 p-1 px-2 rounded-md outline-none selection:bg-orange-200"
+            type="text"
+            id="txthp"
+          />
+          <label htmlFor="txtemail">Email</label>
+          <input
+            required
+            className="bg-orange-100 p-1 px-2 rounded-md outline-none selection:bg-orange-200"
+            type="email"
+            id="txtemail"
+          />
+        </form>
+        <button
+          className="bg-orange-500 text-white col-auto w-full py-2 mt-3 font-bold rounded-md hover:bg-orange-600"
+          onClick={async (e) => {
+            e.preventDefault();
+            let form1 = [
+              $("#txtnama").value,
+              $("#txtnim").value,
+              $("#txtalamat").value,
+              $("#txthp").value,
+              $("#txtemail").value,
+            ];
+
+            if (form1.every((el) => el !== "")) {
+              setModal(true);
+
+              try {
+                const docRef = doc(db, "mhs", $("#txtnim").value);
+                await setDoc(docRef, {
+                  nama: $("#txtnama").value,
+                  nim: $("#txtnim").value,
+                  alamat: $("#txtalamat").value,
+                  hp: $("#txthp").value,
+                  email: $("#txtemail").value,
+                  dateCreated: serverTimestamp(),
+                  dateUpdated: serverTimestamp(),
+                });
+
+                setModalcontent({
+                  title: "Berhasil menyimpan ke database",
+                  content: `${form1.join(" - ")}`,
+                });
+              } catch (err) {
+                setModalcontent({
+                  title: "Gagal menyimpan ke database",
+                  content: err.message,
+                });
+              }
+            }
+          }}
+        >
+          Simpan ke Database
+        </button>
+      </TemplatePr>
+    );
+  };
+
+  const pr8 = () => {
+    return (
+      <TemplatePr
+        title={"Coming soon"}
+        color={{ a1: "bg-lime-50", a2: "bg-lime-300 text-lime-800" }}
+      >
+        <h1>Just wait for it</h1>
+      </TemplatePr>
+    );
+  };
+
   const renderList = {
     0: initialRender,
     1: pr1,
@@ -583,6 +695,8 @@ function App() {
     4: pr4,
     5: pr5,
     6: pr6,
+    7: pr7,
+    8: pr8,
   };
 
   return (
