@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { db } from "./db";
-import { doc, setDoc, serverTimestamp, getFirestore } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 const $ = (el) => document.querySelector(el);
 
 function App() {
@@ -664,7 +664,7 @@ function App() {
               } catch (err) {
                 setModalcontent({
                   title: "Gagal menyimpan ke database",
-                  content: err.message,
+                  content: "Terjadi kesalahan " + err.message,
                 });
               }
             }
@@ -745,9 +745,8 @@ function popUp(title, content, close) {
             </span>
           </div>
           <div className="container mx-auto text-center py-2">
-            {content.split("\n").map((el, id) => (
-              <p key={id}>{el}</p>
-            ))}
+            {content &&
+              content.split("\n").map((el, id) => <p key={id}>{el}</p>)}
           </div>
           <div className="flex justify-center">
             <button
