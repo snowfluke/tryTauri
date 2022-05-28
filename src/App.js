@@ -658,8 +658,8 @@ function App() {
                 });
 
                 setModalcontent({
-                  title: "Berhasil menyimpan ke database",
-                  content: `${form1.join(" - ")}`,
+                  title: "Berhasil",
+                  content: `Berhasil menyimpan ke database`,
                 });
               } catch (err) {
                 setModalcontent({
