@@ -1,47 +1,142 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { db } from "./db";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import {
+  doc,
+  setDoc,
+  collection,
+  deleteDoc,
+  getDocs,
+  updateDoc,
+} from "firebase/firestore";
 const $ = (el) => document.querySelector(el);
 
 function App() {
   const [display, setDisplay] = useState(0);
-  const [modal, setModal] = useState(false);
-  const [modalcontent, setModalcontent] = useState({});
+  const [data, setData] = useState([]);
+  const [bookData, setBookData] = useState([]);
+  const [printData, setPrintData] = useState([]);
 
-  const openModal = (m) => {
-    return popUp(m.title, m.content, () => setModal(false));
+  const fetchData = async () => {
+    try {
+      const docs = (await getDocs(collection(db, "book"))).docs.map((doc) =>
+        doc.data()
+      );
+
+      return docs;
+    } catch (error) {
+      return [];
+    }
+  };
+
+  const fetchBookData = async () => {
+    try {
+      const docs = (await getDocs(collection(db, "bookshelf"))).docs.map(
+        (doc) => doc.data()
+      );
+
+      return docs;
+    } catch (error) {
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    fetchData().then((res) => setData(res));
+    fetchBookData().then((res) => setBookData(res));
+  }, []);
+
+  const filter = async (keyword) => {
+    let freshData = await fetchData();
+
+    if (keyword !== "" && freshData.length) {
+      let filteredData = freshData.filter((el) =>
+        el.kdJenis.toLowerCase().includes(keyword)
+      );
+
+      if (!filteredData.length) {
+        filteredData = freshData.filter((el) =>
+          el.nmJenis.toLowerCase().includes(keyword)
+        );
+      }
+
+      let first = filteredData.length
+        ? filteredData[0]
+        : { kdJenis: "", nmJenis: "" };
+
+      setData(filteredData);
+
+      return first;
+    } else {
+      setData(freshData);
+
+      return { kdJenis: "", nmJenis: "" };
+    }
+  };
+
+  const filterBook = async (keyword) => {
+    let freshData = await fetchBookData();
+
+    if (keyword !== "" && freshData.length) {
+      let filteredData = freshData.filter((el) =>
+        el.kodeBuku.toLowerCase().includes(keyword)
+      );
+
+      if (!filteredData.length) {
+        filteredData = freshData.filter((el) =>
+          el.judul.toLowerCase().includes(keyword)
+        );
+      }
+
+      if (!filteredData.length) {
+        filteredData = freshData.filter((el) =>
+          el.pengarang.toLowerCase().includes(keyword)
+        );
+      }
+
+      if (!filteredData.length) {
+        filteredData = freshData.filter((el) =>
+          el.penerbit.toLowerCase().includes(keyword)
+        );
+      }
+
+      let first = filteredData.length
+        ? filteredData[0]
+        : {
+            deskripsi: "",
+            harga: "",
+            judul: "",
+            jumlahBuku: "",
+            kodeBuku: "",
+            kodeJenis: "",
+            penerbit: "",
+            pengarang: "",
+          };
+
+      setBookData(filteredData);
+
+      return first;
+    } else {
+      setBookData(freshData);
+
+      return {
+        deskripsi: "",
+        harga: "",
+        judul: "",
+        jumlahBuku: "",
+        kodeBuku: "",
+        kodeJenis: "",
+        penerbit: "",
+        pengarang: "",
+      };
+    }
   };
 
   const praktikum = [
-    { content: "Percobaan form", color: "border-l-red-400 hover:bg-red-200" },
+    { content: "Data jenis buku", color: "border-l-red-400 hover:bg-red-200" },
+    { content: "Data buku", color: "border-l-red-400 hover:bg-red-200" },
     {
-      content: "Kalkulator sederhana",
-      color: "border-l-yellow-400 hover:bg-yellow-200",
-    },
-    {
-      content: "Program hitung nilai",
-      color: "border-l-green-400 hover:bg-green-200",
-    },
-    {
-      content: "Program belanja sederhana",
-      color: "border-l-sky-400 hover:bg-sky-200",
-    },
-    {
-      content: "Program order makanan",
-      color: "border-l-fuchsia-400 hover:bg-fuchsia-200",
-    },
-    {
-      content: "Program perulangan teks",
-      color: "border-l-indigo-400 hover:bg-indigo-200",
-    },
-    {
-      content: "Program pendataan mahasiswa",
-      color: "border-l-orange-400 hover:bg-orange-200",
-    },
-    {
-      content: "Coming soon",
-      color: "border-l-lime-400 hover:bg-lime-200",
+      content: "Laporan data",
+      color: "border-l-red-400 hover:bg-red-200",
     },
   ];
 
@@ -68,11 +163,11 @@ function App() {
       <div
         className={"flex flex-col p-5 rounded-md text-slate-800 " + color.a1}
       >
-        <div className="flex mb-3">
+        <div className="flex mb-3  print:hidden">
           <h2 className="flex-1 font-bold text-xl">{title}</h2>
           <button
             className={
-              "px-2 py-1 rounded-md hover:-translate-x-1 transition-all font-bold " +
+              "px-2 py-1 rounded-md hover:-translate-x-1 transition-all font-bold  print:hidden" +
               color.a2
             }
             onClick={() => setDisplay(0)}
@@ -85,622 +180,649 @@ function App() {
     );
   };
 
-  const pr1 = () => (
-    <TemplatePr
-      title={"Percobaan Form"}
-      color={{ a1: "bg-red-50", a2: "bg-red-300 text-red-800" }}
-    >
-      <form className="grid grid-cols-2 gap-2">
-        <label htmlFor="txtnama">Nama</label>
-        <input
-          required
-          className="bg-red-100 p-1 px-2 rounded-md outline-none selection:bg-red-200"
-          type="text"
-          id="txtnama"
-        />
-        <label htmlFor="cbojeniskelamin">Jenis Kelamin</label>
-        <select
-          required
-          className="bg-red-100 p-1 px-2 rounded-md outline-none selection:bg-red-200"
-          id="cbojeniskelamin"
-        >
-          <option value="Laki-Laki">Laki-Laki</option>
-          <option value="Perempuan">Perempuan</option>t
-        </select>
-        <label htmlFor="cbofakultas">Fakultas</label>
-        <select
-          className="bg-red-100 p-1 px-2 rounded-md outline-none selection:bg-red-200"
-          required
-          id="cbofakultas"
-        >
-          <option value="FAI">FAI</option>
-          <option value="FBS">FBS</option>
-          <option value="FIA">FIA</option>
-          <option value="FIK">FIK</option>
-          <option value="FT">FT</option>
-        </select>
-      </form>
-      <button
-        className="bg-red-500 text-white col-auto w-full py-2 mt-3 font-bold rounded-md hover:bg-red-600"
-        onClick={(e) => {
-          e.preventDefault();
-          let form1 = [
-            $("#txtnama").value,
-            $("#cbojeniskelamin").value,
-            $("#cbofakultas").value,
-          ];
-
-          if (form1.every((el) => el !== "")) {
-            setModal(true);
-            setModalcontent({
-              title: "Hasil Pengisian",
-              content: `${form1[0]}\n${form1[1]}\n${form1[2]}`,
-            });
-          }
-        }}
-      >
-        Tampilkan pesan
-      </button>
-    </TemplatePr>
-  );
-
-  const handlePr2 = (e, symbol) => {
-    e.preventDefault();
-    let angka = [$("#angka1").value, $("#angka2").value];
-    if (angka.every((el) => el === "")) return;
-
-    $("#hasil").value = eval(`${angka[0]} ${symbol} ${angka[1]}`);
-  };
-
-  const pr2 = () => (
-    <TemplatePr
-      title={"Kalkulator Sederhana"}
-      color={{ a1: "bg-yellow-50", a2: "bg-yellow-300 text-yellow-800" }}
-    >
-      <form className="grid grid-cols-2 gap-2">
-        <label htmlFor="angka1">Angka Pertama</label>
-        <input
-          required
-          type="number"
-          id="angka1"
-          className="bg-yellow-100 p-1 px-2 rounded-md outline-none selection:bg-yellow-200"
-        />
-        <label htmlFor="angka2">Angka Kedua</label>
-        <input
-          required
-          type="number"
-          id="angka2"
-          className="bg-yellow-100 p-1 px-2 rounded-md outline-none selection:bg-yellow-200"
-        />
-        <div className="col-span-2 grid grid-cols-4 gap-2">
-          <button
-            className="py-1 rounded-md hover:bg-yellow-400 transition-all font-bold bg-yellow-300 text-yellow-800"
-            onClick={(e) => handlePr2(e, "+")}
-          >
-            +
-          </button>
-          <button
-            className="py-1 rounded-md hover:bg-yellow-400 transition-all font-bold bg-yellow-300 text-yellow-800"
-            onClick={(e) => handlePr2(e, "-")}
-          >
-            -
-          </button>
-          <button
-            className="py-1 rounded-md hover:bg-yellow-400 transition-all font-bold bg-yellow-300 text-yellow-800"
-            onClick={(e) => handlePr2(e, "/")}
-          >
-            /
-          </button>
-          <button
-            className="py-1 rounded-md hover:bg-yellow-400 transition-all font-bold bg-yellow-300 text-yellow-800"
-            onClick={(e) => handlePr2(e, "*")}
-          >
-            X
-          </button>
-        </div>
-        <label htmlFor="hasil" className="font-bold">
-          Hasil
-        </label>
-        <input
-          required
-          type="number"
-          disabled={true}
-          id="hasil"
-          className="text-center border-b-2 border-b-yellow-200 border-b-solid font-bold bg-none px-2 rounded-md outline-none selection:bg-yellow-200"
-        />
-      </form>
-    </TemplatePr>
-  );
-
-  const pr3 = () => (
-    <TemplatePr
-      title={"Program Hitung Nilai"}
-      color={{ a1: "bg-green-50", a2: "bg-green-300 text-green-800" }}
-    >
-      <form className="grid grid-cols-2 gap-2">
-        <label htmlFor="tatapMuka">Tatap Muka</label>
-        <input
-          required
-          type="number"
-          id="tatapMuka"
-          className="bg-green-100 p-1 px-2 rounded-md outline-none selection:bg-green-200"
-        />
-        <label htmlFor="midTest">Mid Test</label>
-        <input
-          required
-          type="number"
-          id="midTest"
-          className="bg-green-100 p-1 px-2 rounded-md outline-none selection:bg-green-200"
-        />
-        <label htmlFor="finalTest">Final Test</label>
-        <input
-          required
-          type="number"
-          id="finalTest"
-          className="bg-green-100 p-1 px-2 rounded-md outline-none selection:bg-green-200"
-        />
-        <span></span>
-        <button
-          className="py-1 rounded-md hover:bg-green-400 transition-all font-bold bg-green-300 text-green-800"
-          onClick={(e) => {
-            e.preventDefault();
-            let data = [
-              $("#tatapMuka").value,
-              $("#midTest").value,
-              $("#finalTest").value,
-            ];
-            if (data.every((el) => el === "")) return;
-
-            $("#hasilAkhir").value = Math.round(
-              data.reduce((acc, curr) => acc + parseInt(curr), 0) / data.length
-            );
-          }}
-        >
-          Hitung
-        </button>
-        <label htmlFor="hasilAkhir" className="font-bold">
-          Hasil Akhir
-        </label>
-        <input
-          required
-          type="number"
-          disabled={true}
-          id="hasilAkhir"
-          className="text-center border-b-2 border-b-green-200 border-b-solid font-bold bg-none px-2 rounded-md outline-none selection:bg-green-200"
-        />
-      </form>
-    </TemplatePr>
-  );
-
-  const pr4 = () => (
-    <TemplatePr
-      title={"Program Belanja Sederhana"}
-      color={{ a1: "bg-sky-50", a2: "bg-sky-300 text-sky-800" }}
-    >
-      <form className="grid grid-cols-2 gap-2">
-        <label htmlFor="namaBarang">Nama Barang</label>
-        <input
-          required
-          type="text"
-          id="namaBarang"
-          className="bg-sky-100 p-1 px-2 rounded-md outline-none selection:bg-sky-200"
-        />
-
-        <label htmlFor="hargaSatuan">Harga Satuan</label>
-        <input
-          required
-          type="number"
-          id="hargaSatuan"
-          className="bg-sky-100 p-1 px-2 rounded-md outline-none selection:bg-sky-200"
-        />
-
-        <label htmlFor="jumlahBarang">Jumlah Barang</label>
-        <input
-          required
-          type="number"
-          id="jumlahBarang"
-          className="bg-sky-100 p-1 px-2 rounded-md outline-none selection:bg-sky-200"
-        />
-        <span></span>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            className="py-1 rounded-md hover:bg-sky-400 transition-all font-bold bg-sky-300 text-sky-800"
-            onClick={(e) => {
-              e.preventDefault();
-              let barang = [
-                $("#namaBarang").value,
-                $("#hargaSatuan").value,
-                $("#jumlahBarang").value,
-              ];
-              if (barang.every((el) => el === "")) return;
-
-              let totalHarga = parseInt(barang[1]) * parseInt(barang[2]);
-              $("#totalHarga").value = totalHarga;
-
-              const list = [
-                { patokan: 500000, diskon: 0.2, bonus: "Tas Pinggang" },
-                { patokan: 200000, diskon: 0.15, bonus: "Payung" },
-                { patokan: 100000, diskon: 0.1, bonus: "Kaos" },
-                { patokan: 50000, diskon: 0.05, bonus: "Cangkir" },
-                { patokan: 0, diskon: 0.0, bonus: "Tidak ada" },
-              ];
-
-              list.forEach((obj, id, arr) => {
-                let batasBawah = obj.patokan;
-                let batasAtas = arr[id - 1]?.patokan || totalHarga + 1;
-
-                if (totalHarga >= batasBawah && totalHarga < batasAtas) {
-                  let diskonHarga = obj.diskon * totalHarga;
-                  $("#diskon").value = `${diskonHarga} (${obj.diskon * 100}%)`;
-                  $("#totalBayar").value = totalHarga - diskonHarga;
-                  $("#bonus").value = obj.bonus;
-                }
-              });
-            }}
-          >
-            Hitung
-          </button>
-          <input
-            type="reset"
-            value="Ulang"
-            className="cursor-pointer py-1 rounded-md hover:bg-sky-400 transition-all font-bold bg-sky-300 text-sky-800"
-          />
-        </div>
-        <label htmlFor="totalHarga" className="font-bold">
-          Total Harga
-        </label>
-        <input
-          required
-          type="number"
-          id="totalHarga"
-          disabled={true}
-          className="text-center border-b-2 border-b-sky-200 border-b-solid font-bold bg-none px-2 rounded-md outline-none selection:bg-sky-200"
-        />
-        <label htmlFor="diskon" className="font-bold">
-          Diskon
-        </label>
-        <input
-          required
-          type="text"
-          id="diskon"
-          disabled={true}
-          className="text-center border-b-2 border-b-sky-200 border-b-solid font-bold bg-none px-2 rounded-md outline-none selection:bg-sky-200"
-        />
-
-        <label htmlFor="totalBayar" className="font-bold">
-          Total Bayar
-        </label>
-        <input
-          required
-          type="number"
-          id="totalBayar"
-          disabled={true}
-          className="text-center border-b-2 border-b-sky-200 border-b-solid font-bold bg-none px-2 rounded-md outline-none selection:bg-sky-200"
-        />
-
-        <label htmlFor="bonus" className="font-bold">
-          Bonus
-        </label>
-        <input
-          required
-          type="text"
-          id="bonus"
-          disabled={true}
-          className="text-center border-b-2 border-b-sky-200 border-b-solid font-bold bg-none px-2 rounded-md outline-none selection:bg-sky-200"
-        />
-
-        <span></span>
-        <button
-          className="py-1 rounded-md hover:bg-sky-400 transition-all font-bold bg-sky-300 text-sky-800"
-          onClick={(e) => setDisplay(0)}
-        >
-          Keluar
-        </button>
-      </form>
-    </TemplatePr>
-  );
-
-  const pr5 = () => {
-    let menu = {
-      nu: 3500,
-      b: 6000,
-      ma: 7000,
-      ej: 3000,
-      ja: 7000,
-      tm: 4000,
-    };
-
-    let makanan = menu.nu,
-      minuman = 0;
-    const changeMakanan = (m) => {
-      makanan = m;
-      $("#hargaMakanan").innerText = `Rp. ${m}`;
-    };
-
-    const changeMinuman = (m) => {
-      minuman = m;
-      $("#hargaMinuman").innerText = `Rp. ${m}`;
-    };
-
+  const Pr1 = () => {
     return (
       <TemplatePr
-        title={"Program Order Makanan"}
-        color={{ a1: "bg-fuchsia-50", a2: "bg-fuchsia-300 text-fuchsia-800" }}
-      >
-        <form className="grid grid-cols-3 gap-2">
-          <select
-            id="namaMakanan"
-            className="bg-fuchsia-100 p-1 px-2 rounded-md outline-none selection:bg-fuchsia-200"
-            onChange={(e) => changeMakanan(menu[e.target.value])}
-          >
-            <option value="nu">Nasi Uduk</option>
-            <option value="b">Bakso</option>
-            <option value="ma">Mie Ayam</option>
-          </select>
-          <p className="text-center font-bold">Harga</p>
-          <p id="hargaMakanan" className="text-center font-bold">
-            Rp. 3500
-          </p>
-          <span className="text-left col-span-3 mb-2 flex items-center">
-            <input
-              type="checkbox"
-              id="denganMinuman"
-              className="w-5 h-5 mr-2 border-0"
-              onChange={(e) => {
-                $("#namaMinuman").disabled = !e.target.checked;
-                $("#porsiMinum").disabled = !e.target.checked;
-                minuman = menu[$("#namaMinuman").value];
-              }}
-            />
-            <p>Termasuk dengan minuman</p>
-          </span>
-          <select
-            id="namaMinuman"
-            disabled={true}
-            className="bg-fuchsia-100 p-1 px-2 rounded-md outline-none selection:bg-fuchsia-200"
-            onChange={(e) => changeMinuman(menu[e.target.value])}
-          >
-            <option value="ej">Es Jeruk</option>
-            <option value="ja">Jus Alpukat</option>
-            <option value="tm">Teh Manis</option>
-          </select>
-          <p className="text-center font-bold">Harga</p>
-          <p id="hargaMinuman" className="text-center font-bold">
-            Rp. 3000
-          </p>
-        </form>
-        <fieldset className="mt-3 border border-solid border-fuchsia-300 p-3 rounded-md">
-          <legend className="px-2 font-bold">Menu Pesanan</legend>
-          <form className="grid grid-cols-2 gap-2">
-            <label htmlFor="porsiMakan">Berapa porsi makanan</label>
-            <input
-              required
-              type="number"
-              id="porsiMakan"
-              defaultValue={1}
-              className="bg-fuchsia-100 p-1 px-2 rounded-md outline-none selection:bg-fuchsia-200"
-            />
-            <label htmlFor="porsiminum">Berapa porsi minuman</label>
-            <input
-              required
-              type="number"
-              disabled={true}
-              id="porsiMinum"
-              defaultValue={1}
-              className="bg-fuchsia-100 p-1 px-2 rounded-md outline-none selection:bg-fuchsia-200"
-            />
-            <button
-              className="py-1 rounded-md hover:bg-fuchsia-400 transition-all font-bold bg-fuchsia-300 text-fuchsia-800"
-              onClick={(e) => {
-                e.preventDefault();
-                let porsiMakan = $("#porsiMakan").value;
-                let porsiMinum = $("#porsiMinum").value;
-
-                if (porsiMakan < 1 || porsiMinum < 1) return;
-                $("#hasilAkhir").innerText = `Rp. ${
-                  makanan * parseInt(porsiMakan) +
-                  minuman * parseInt(porsiMinum)
-                }`;
-              }}
-            >
-              Hitung
-            </button>
-            <p
-              id="hasilAkhir"
-              className="text-center border-b-2 border-b-fuchsia-200 border-b-solid font-bold bg-none px-2 rounded-md outline-none selection:bg-fuchsia-200"
-            ></p>
-          </form>
-        </fieldset>
-      </TemplatePr>
-    );
-  };
-
-  const pr6 = () => {
-    return (
-      <TemplatePr
-        title={"Program Perulangan Teks"}
-        color={{ a1: "bg-indigo-50", a2: "bg-indigo-300 text-indigo-800" }}
+        title={"Data jenis buku"}
+        color={{ a1: "bg-red-50", a2: "bg-red-300 text-red-800" }}
       >
         <form className="grid grid-cols-2 gap-2">
-          <label htmlFor="teks">Tuliskan teks</label>
+          <label htmlFor="kdjenis">Kode Jenis</label>
           <input
             required
+            className="bg-red-100 p-1 px-2 rounded-md outline-none selection:bg-red-200"
             type="text"
-            id="teks"
-            className="bg-indigo-100 p-1 px-2 rounded-md outline-none selection:bg-indigo-200"
+            id="TextBox1"
           />
-
-          <label htmlFor="jumlahPengulangan">Jumlah Pengulangan</label>
+          <label htmlFor="nmjenis">Nama Jenis</label>
           <input
             required
-            type="number"
-            id="jumlahPengulangan"
-            className="bg-indigo-100 p-1 px-2 rounded-md outline-none selection:bg-indigo-200"
-          />
-
-          <div className="grid col-span-2 grid-cols-3 gap-2">
-            <span></span>
-            <button
-              className="py-1 rounded-md hover:bg-indigo-400 transition-all font-bold bg-indigo-300 text-indigo-800"
-              onClick={(e) => {
-                e.preventDefault();
-                let props = [$("#teks").value, $("#jumlahPengulangan").value];
-                if (props.every((el) => el === "")) return;
-                if (isNaN(props[1]) || props[1] < 1) return;
-
-                let teks = "";
-                for (let i = 0; i < props[1]; i++) {
-                  teks += `${props[0]}\n`;
-                }
-
-                $("#perulangan").value = teks;
-              }}
-            >
-              Proses
-            </button>
-            <span></span>
-          </div>
-          <textarea
-            id="perulangan"
-            className="col-span-2 overflow-y-scroll resize-none h-[150px]"
-          ></textarea>
-          <button
-            className="py-1 rounded-md hover:bg-indigo-400 transition-all font-bold bg-indigo-300 text-indigo-800"
-            onClick={(e) => {
-              e.preventDefault();
-              $("#teks").value = "";
-              $("#jumlahPengulangan").value = "";
-              $("#perulangan").value = "";
-            }}
-          >
-            Clear
-          </button>
-          <button
-            className="py-1 rounded-md hover:bg-indigo-400 transition-all font-bold bg-indigo-300 text-indigo-800"
-            onClick={(e) => setDisplay(0)}
-          >
-            Keluar
-          </button>
-        </form>
-      </TemplatePr>
-    );
-  };
-
-  const pr7 = () => {
-    return (
-      <TemplatePr
-        title={"Program Pendataan Mahasiswa"}
-        color={{ a1: "bg-orange-50", a2: "bg-orange-300 text-orange-800" }}
-      >
-        <form className="grid grid-cols-2 gap-2">
-          <label htmlFor="txtnim">NIM</label>
-          <input
-            required
-            className="bg-orange-100 p-1 px-2 rounded-md outline-none selection:bg-orange-200"
+            className="bg-red-100 p-1 px-2 rounded-md outline-none selection:bg-red-200"
             type="text"
-            id="txtnim"
-          />
-          <label htmlFor="txtnama">Nama</label>
-          <input
-            required
-            className="bg-orange-100 p-1 px-2 rounded-md outline-none selection:bg-orange-200"
-            type="text"
-            id="txtnama"
-          />
-          <label htmlFor="txtalamat">Alamat</label>
-          <input
-            required
-            className="bg-orange-100 p-1 px-2 rounded-md outline-none selection:bg-orange-200"
-            type="text"
-            id="txtalamat"
-          />
-          <label htmlFor="txthp">No. HP</label>
-          <input
-            required
-            className="bg-orange-100 p-1 px-2 rounded-md outline-none selection:bg-orange-200"
-            type="text"
-            id="txthp"
-          />
-          <label htmlFor="txtemail">Email</label>
-          <input
-            required
-            className="bg-orange-100 p-1 px-2 rounded-md outline-none selection:bg-orange-200"
-            type="email"
-            id="txtemail"
+            id="TextBox2"
           />
         </form>
-        <button
-          className="bg-orange-500 text-white col-auto w-full py-2 mt-3 font-bold rounded-md hover:bg-orange-600"
-          onClick={async (e) => {
-            e.preventDefault();
-            let form1 = [
-              $("#txtnama").value,
-              $("#txtnim").value,
-              $("#txtalamat").value,
-              $("#txthp").value,
-              $("#txtemail").value,
-            ];
-
-            if (form1.every((el) => el !== "")) {
-              setModal(true);
-
+        <div className="grid grid-cols-4 gap-2">
+          <button
+            id="Simpan"
+            className="bg-red-500 text-white col-auto w-full py-2 mt-3 font-bold rounded-md hover:bg-red-600"
+            onClick={async (e) => {
               try {
-                const docRef = doc(db, "mhs", $("#txtnim").value);
-                await setDoc(docRef, {
-                  nama: $("#txtnama").value,
-                  nim: $("#txtnim").value,
-                  alamat: $("#txtalamat").value,
-                  hp: $("#txthp").value,
-                  email: $("#txtemail").value,
-                  dateCreated: serverTimestamp(),
-                  dateUpdated: serverTimestamp(),
-                });
+                e.preventDefault();
+                let kdJenis = $("#TextBox1").value;
+                if (!kdJenis) return alert("Kode jenis tidak boleh kosong!");
 
-                setModalcontent({
-                  title: "Berhasil",
-                  content: `Berhasil menyimpan ke database`,
-                });
-              } catch (err) {
-                setModalcontent({
-                  title: "Gagal menyimpan ke database",
-                  content: "Terjadi kesalahan " + err.message,
-                });
+                let nmJenis = $("#TextBox2").value;
+
+                const docRef = doc(db, `book`, kdJenis);
+                await setDoc(docRef, { kdJenis, nmJenis });
+                alert("Berhasil menyimpan jenis buku");
+                await filter("");
+              } catch (error) {
+                alert(error.message);
               }
-            }
-          }}
+            }}
+          >
+            Simpan
+          </button>
+          <button
+            id="Ubah"
+            className="bg-red-500 text-white col-auto w-full py-2 mt-3 font-bold rounded-md hover:bg-red-600"
+            onClick={async (e) => {
+              try {
+                e.preventDefault();
+                let kdJenis = $("#TextBox1").value;
+                if (!kdJenis) return alert("Kode jenis tidak boleh kosong!");
+
+                let nmJenis = $("#TextBox2").value;
+
+                const docRef = doc(db, `book`, kdJenis);
+                await updateDoc(docRef, { kdJenis, nmJenis });
+                alert("Berhasil mengupdate jenis buku");
+                await filter("");
+              } catch (error) {
+                alert(error.message);
+              }
+            }}
+          >
+            Ubah
+          </button>
+          <button
+            id="Hapus"
+            className="bg-red-500 text-white col-auto w-full py-2 mt-3 font-bold rounded-md hover:bg-red-600"
+            onClick={async (e) => {
+              try {
+                e.preventDefault();
+                let kdJenis = $("#TextBox1").value;
+                if (!kdJenis) return alert("Kode jenis tidak boleh kosong!");
+
+                const docRef = doc(db, `book`, kdJenis);
+                await deleteDoc(docRef);
+                alert("Berhasil menghapus jenis buku");
+                await filter("");
+              } catch (error) {
+                alert(error.message);
+              }
+            }}
+          >
+            Hapus
+          </button>
+          <button
+            id="Batal"
+            className="bg-red-500 text-white col-auto w-full py-2 mt-3 font-bold rounded-md hover:bg-red-600"
+            onClick={(e) => {
+              e.preventDefault();
+              $("#TextBox1").value = "";
+              $("#TextBox2").value = "";
+            }}
+          >
+            Batal
+          </button>
+        </div>
+        <form className="grid mt-2  grid-cols-2 gap-2">
+          <input
+            required
+            type="text"
+            id="TextBox3"
+            placeholder="Cari data disini ..."
+            className="font-bold outline-none selection:bg-red-200 bg-red-100 p-1 px-2 rounded-md"
+          />
+          <button
+            id="Cari"
+            className="bg-red-500 text-white col-auto w-full py-2 font-bold rounded-md hover:bg-red-600"
+            onClick={async (e) => {
+              e.preventDefault();
+              $("#TextBox1").value = "";
+              $("#TextBox2").value = "";
+
+              let keyword = $("#TextBox3").value;
+              const res = await filter(keyword);
+              if (res.kdJenis && keyword !== "") {
+                $("#TextBox1").value = res.kdJenis;
+                $("#TextBox2").value = res.nmJenis;
+              }
+            }}
+          >
+            Cari
+          </button>
+        </form>
+        <div
+          id="DataGridView1"
+          className="flex bg-white w-full col-span-2 outline-none mt-2 overflow-y-scroll resize-none h-[150px]"
         >
-          Simpan ke Database
-        </button>
+          <table className=" table-auto">
+            <thead>
+              <tr>
+                <th className=" border-2 border-black p-2">No</th>
+                <th className=" border-2 border-black p-2">Kode Jenis</th>
+                <th className=" border-2 border-black p-2">Nama Jenis</th>
+              </tr>
+            </thead>
+            {
+              <tbody>
+                {!data.length ? (
+                  <tr>
+                    <td colSpan={3}>Tidak ada data</td>
+                  </tr>
+                ) : (
+                  data.map((el, id) => (
+                    <tr key={id}>
+                      <td className=" border-2 border-black p-2">{id + 1}</td>
+                      <td className=" border-2 border-black p-2">
+                        {el.kdJenis}
+                      </td>
+                      <td className=" border-2 border-black p-2">
+                        {el.nmJenis}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            }
+          </table>
+        </div>
       </TemplatePr>
     );
   };
 
-  const pr8 = () => {
+  const Pr2 = () => {
     return (
       <TemplatePr
-        title={"Coming soon"}
-        color={{ a1: "bg-lime-50", a2: "bg-lime-300 text-lime-800" }}
+        title={"Data buku"}
+        color={{ a1: "bg-red-50", a2: "bg-red-300 text-red-800" }}
       >
-        <h1>Just wait for it</h1>
+        <div className="grid grid-cols-1 gap-2 ">
+          <div className="grid grid-cols-6 gap-2 items-center">
+            <label htmlFor="kdjenis">Kode Buku</label>
+            <input
+              required
+              className="bg-red-100 p-1 px-2 rounded-md outline-none selection:bg-red-200"
+              type="text"
+              id="TextBox1"
+            />
+            <label htmlFor="nmjenis">Jenis Buku</label>
+            <select
+              className="bg-red-100 p-1 px-2 rounded-md outline-none selection:bg-red-200"
+              defaultValue={0}
+              onChange={(e) => {
+                $("#TextBox8").value = data.filter(
+                  (el) => el.kdJenis === e.target.value
+                )[0]?.nmJenis;
+              }}
+              required
+              id="ComboBox1"
+            >
+              <option value={0} disabled className="hidden"></option>
+              {data?.map((el, id) => (
+                <option key={id} value={el.kdJenis}>
+                  {el.kdJenis}
+                </option>
+              ))}
+            </select>
+            <input
+              disabled={true}
+              className="col-span-2 bg-red-200 p-1 px-2 rounded-md outline-none selection:bg-red-300"
+              type="text"
+              id="TextBox8"
+            />
+          </div>
+          <div className="grid grid-cols-6 gap-2 items-center">
+            <label htmlFor="judul" className="grid">
+              Judul
+            </label>
+            <input
+              required
+              className="grid col-span-5 bg-red-100 p-1 px-2 rounded-md outline-none selection:bg-red-200"
+              type="text"
+              id="TextBox2"
+            />
+          </div>
+          <div className="grid grid-cols-6 gap-2 items-center">
+            <label htmlFor="pengarang" className="grid">
+              Pengarang
+            </label>
+            <input
+              required
+              className="grid col-span-3 bg-red-100 p-1 px-2 rounded-md outline-none selection:bg-red-200"
+              type="text"
+              id="TextBox3"
+            />
+            <p>Deskripsi</p>
+          </div>
+
+          <div className="grid grid-cols-6 gap-2 items-center">
+            <label htmlFor="penerbit" className="grid">
+              Penerbit
+            </label>
+            <input
+              required
+              className="grid col-span-3 bg-red-100 p-1 px-2 rounded-md outline-none selection:bg-red-200"
+              type="text"
+              id="TextBox4"
+            />
+            <input
+              required
+              className="grid col-span-2 h-full row-span-2 bg-red-100 p-1 px-2 rounded-md outline-none selection:bg-red-200"
+              type="text"
+              id="TextBox7"
+            />
+            <label htmlFor="JumlahBuku" className="grid">
+              Jumlah Buku
+            </label>
+            <input
+              required
+              className="grid bg-red-100 p-1 px-2 rounded-md outline-none selection:bg-red-200"
+              type="text"
+              id="TextBox5"
+            />
+            <label htmlFor="Harga" className="grid">
+              Harga (Rp. K)
+            </label>
+            <input
+              required
+              className="grid bg-red-100 p-1 px-2 rounded-md outline-none selection:bg-red-200"
+              type="text"
+              id="TextBox6"
+            />
+          </div>
+
+          <div className="grid grid-cols-5 gap-2 items-center">
+            <button
+              id="Simpan"
+              className="bg-red-500 text-white col-auto w-full py-2 mt-3 font-bold rounded-md hover:bg-red-600"
+              onClick={async (e) => {
+                try {
+                  e.preventDefault();
+                  let kodeBuku = $("#TextBox1").value;
+                  if (!kodeBuku) return alert("Kode Buku tidak boleh kosong!");
+
+                  let judul = $("#TextBox2").value;
+                  let pengarang = $("#TextBox3").value;
+                  let penerbit = $("#TextBox4").value;
+                  let jumlahBuku = $("#TextBox5").value;
+                  let harga = $("#TextBox6").value;
+                  let deskripsi = $("#TextBox7").value;
+                  let kodeJenis = $("#ComboBox1").value;
+
+                  const docRef = doc(db, `bookshelf`, kodeBuku);
+                  await setDoc(docRef, {
+                    kodeBuku,
+                    judul,
+                    pengarang,
+                    penerbit,
+                    jumlahBuku,
+                    harga,
+                    deskripsi,
+                    kodeJenis,
+                  });
+                  alert("Berhasil menyimpan buku");
+                  await filterBook("");
+                } catch (error) {
+                  alert(error.message);
+                }
+              }}
+            >
+              Simpan
+            </button>
+            <button
+              id="Ubah"
+              className="bg-red-500 text-white col-auto w-full py-2 mt-3 font-bold rounded-md hover:bg-red-600"
+              onClick={async (e) => {
+                try {
+                  e.preventDefault();
+                  let kodeBuku = $("#TextBox1").value;
+                  if (!kodeBuku) return alert("Kode Buku tidak boleh kosong!");
+
+                  let judul = $("#TextBox2").value;
+                  let pengarang = $("#TextBox3").value;
+                  let penerbit = $("#TextBox4").value;
+                  let jumlahBuku = $("#TextBox5").value;
+                  let harga = $("#TextBox6").value;
+                  let deskripsi = $("#TextBox7").value;
+                  let kodeJenis = $("#ComboBox1").value;
+
+                  const docRef = doc(db, `bookshelf`, kodeBuku);
+                  await updateDoc(docRef, {
+                    kodeBuku,
+                    judul,
+                    pengarang,
+                    penerbit,
+                    jumlahBuku,
+                    harga,
+                    deskripsi,
+                    kodeJenis,
+                  });
+                  alert("Berhasil mengupdate buku");
+                  await filterBook("");
+                } catch (error) {
+                  alert(error.message);
+                }
+              }}
+            >
+              Ubah
+            </button>
+            <button
+              id="Hapus"
+              className="bg-red-500 text-white col-auto w-full py-2 mt-3 font-bold rounded-md hover:bg-red-600"
+              onClick={async (e) => {
+                try {
+                  e.preventDefault();
+                  let kodeBuku = $("#TextBox1").value;
+                  if (!kodeBuku) return alert("Kode Buku tidak boleh kosong!");
+
+                  const docRef = doc(db, `bookshelf`, kodeBuku);
+                  await deleteDoc(docRef);
+                  alert("Berhasil menghapus buku");
+                  await filterBook("");
+                } catch (error) {
+                  alert(error.message);
+                }
+              }}
+            >
+              Hapus
+            </button>
+            <button
+              id="Batal"
+              className="bg-red-500 text-white col-auto w-full py-2 mt-3 font-bold rounded-md hover:bg-red-600"
+              onClick={(e) => {
+                e.preventDefault();
+                $("#TextBox1").value = "";
+                $("#TextBox2").value = "";
+                $("#TextBox3").value = "";
+                $("#TextBox4").value = "";
+                $("#TextBox5").value = "";
+                $("#TextBox6").value = "";
+                $("#TextBox7").value = "";
+                $("#TextBox8").value = "";
+                $("#ComboBox1").value = 0;
+              }}
+            >
+              Batal
+            </button>
+            <button
+              id="Tutup"
+              className="bg-red-500 text-white col-auto w-full py-2 mt-3 font-bold rounded-md hover:bg-red-600"
+              onClick={() => setDisplay(0)}
+            >
+              Tutup
+            </button>
+          </div>
+          <div className="grid my-2 grid-cols-6 gap-2">
+            <input
+              required
+              type="text"
+              id="TextBox9"
+              placeholder="Cari data disini ..."
+              className="font-bold outline-none col-span-5 selection:bg-red-200 bg-red-100 p-1 px-2 rounded-md"
+            />
+            <button
+              id="Cari"
+              className="bg-red-500 text-white py-2 font-bold rounded-md hover:bg-red-600"
+              onClick={async (e) => {
+                e.preventDefault();
+                $("#TextBox1").value = "";
+                $("#TextBox2").value = "";
+                $("#TextBox3").value = "";
+                $("#TextBox4").value = "";
+                $("#TextBox5").value = "";
+                $("#TextBox6").value = "";
+                $("#TextBox7").value = "";
+                $("#TextBox8").value = "";
+                $("#ComboBox1").value = 0;
+
+                let keyword = $("#TextBox9").value;
+                const res = await filterBook(keyword);
+                if (res.kodeBuku && keyword !== "") {
+                  $("#TextBox1").value = res.kodeBuku;
+                  $("#TextBox2").value = res.judul;
+                  $("#TextBox3").value = res.pengarang;
+                  $("#TextBox4").value = res.penerbit;
+                  $("#TextBox5").value = res.jumlahBuku;
+                  $("#TextBox6").value = res.harga;
+                  $("#TextBox7").value = res.deskripsi;
+                  $("#TextBox8").value = data.filter(
+                    (el) => el.kdJenis === res.kodeJenis
+                  )[0]?.nmJenis;
+                  $("#ComboBox1").value = res.kodeJenis;
+                }
+              }}
+            >
+              Cari
+            </button>
+          </div>
+        </div>
+        <div
+          id="DataGridView1"
+          className="flex bg-white w-full col-span-2 outline-none mt-2 overflow-y-scroll resize-none h-[150px]"
+        >
+          <table className=" table-auto">
+            <thead>
+              <tr>
+                <th className=" border-2 border-black p-2">No</th>
+                <th className=" border-2 border-black p-2">Kode</th>
+                <th className=" border-2 border-black p-2">Judul</th>
+                <th className=" border-2 border-black p-2">Pengarang</th>
+                <th className=" border-2 border-black p-2">Penerbit</th>
+                <th className=" border-2 border-black p-2">Jenis</th>
+                <th className=" border-2 border-black p-2">Jumlah</th>
+                <th className=" border-2 border-black p-2">Harga</th>
+                <th className=" border-2 border-black p-2">Deskripsi</th>
+              </tr>
+            </thead>
+            {
+              <tbody>
+                {!bookData.length ? (
+                  <tr>
+                    <td colSpan={3}>Tidak ada buku</td>
+                  </tr>
+                ) : (
+                  bookData.map((el, id) => (
+                    <tr key={id}>
+                      <td className=" border-2 border-black p-2">{id + 1}</td>
+                      <td className=" border-2 border-black p-2">
+                        {el.kodeBuku}
+                      </td>
+                      <td className=" border-2 border-black p-2">{el.judul}</td>
+                      <td className=" border-2 border-black p-2">
+                        {el.pengarang}
+                      </td>
+                      <td className=" border-2 border-black p-2">
+                        {el.penerbit}
+                      </td>
+                      <td className=" border-2 border-black p-2">
+                        {
+                          data?.filter((er) => er.kdJenis === el.kodeJenis)[0]
+                            ?.nmJenis
+                        }
+                      </td>
+                      <td className=" border-2 border-black p-2">
+                        {el.jumlahBuku}
+                      </td>
+                      <td className=" border-2 border-black p-2">{el.harga}</td>
+                      <td className=" border-2 border-black p-2">
+                        {el.deskripsi}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            }
+          </table>
+        </div>
+      </TemplatePr>
+    );
+  };
+
+  const Pr3 = () => {
+    return (
+      <TemplatePr
+        title={"Laporan Data"}
+        color={{ a1: "bg-red-50", a2: "bg-red-300 text-red-800" }}
+      >
+        <div className="grid grid-cols-1 gap-2 ">
+          <div className="grid my-2 grid-cols-6 gap-2  print:hidden">
+            <select
+              className="bg-red-100 p-1 col-span-4 px-2 rounded-md outline-none selection:bg-red-200"
+              defaultValue={0}
+              required
+              id="ComboBox1"
+            >
+              <option value={0} disabled>
+                Pilih Jenis Data
+              </option>
+              <option value={"jenisBuku"}>Data Jenis Buku</option>
+              <option value={"dataBuku"}>Data Buku</option>
+            </select>
+            <button
+              id="Tampilkan"
+              className="bg-red-500 text-white py-2 font-bold rounded-md hover:bg-red-600"
+              onClick={async (e) => {
+                e.preventDefault();
+                let val = $("#ComboBox1").value;
+                if (!val) return;
+
+                let d;
+                if (val === "jenisBuku") {
+                  d = await fetchData();
+                  setPrintData(d);
+                  return;
+                }
+
+                d = await fetchBookData();
+                setPrintData(d);
+                return;
+              }}
+            >
+              Tampilkan
+            </button>
+            <button
+              id="Tampilkan"
+              className="bg-red-500 text-white py-2 font-bold rounded-md hover:bg-red-600"
+              onClick={async (e) => {
+                e.preventDefault();
+                window.print();
+              }}
+            >
+              Cetak
+            </button>
+          </div>
+        </div>
+        <div
+          id="DataGridView1"
+          className="flex bg-white w-full col-span-2 outline-none mt-2 overflow-y-scroll resize-none h-[150px]"
+        >
+          <table className=" table-auto">
+            <thead>
+              <tr>
+                {!printData.length ? (
+                  <></>
+                ) : $("#ComboBox1").value === "jenisBuku" ? (
+                  <>
+                    <th className=" border-2 border-black p-2">No</th>
+                    <th className=" border-2 border-black p-2">Kode Jenis</th>
+                    <th className=" border-2 border-black p-2">Nama Jenis</th>
+                  </>
+                ) : (
+                  <>
+                    <th className=" border-2 border-black p-2">No</th>
+                    <th className=" border-2 border-black p-2">Kode</th>
+                    <th className=" border-2 border-black p-2">Judul</th>
+                    <th className=" border-2 border-black p-2">Pengarang</th>
+                    <th className=" border-2 border-black p-2">Penerbit</th>
+                    <th className=" border-2 border-black p-2">Jenis</th>
+                    <th className=" border-2 border-black p-2">Jumlah</th>
+                    <th className=" border-2 border-black p-2">Harga</th>
+                    <th className=" border-2 border-black p-2">Deskripsi</th>
+                  </>
+                )}
+              </tr>
+            </thead>
+            {
+              <tbody>
+                {!printData.length ? (
+                  <tr>
+                    <td colSpan={3}>Tidak ada data</td>
+                  </tr>
+                ) : $("#ComboBox1").value === "jenisBuku" ? (
+                  printData.map((el, id) => (
+                    <tr key={id}>
+                      <td className=" border-2 border-black p-2">{id + 1}</td>
+                      <td className=" border-2 border-black p-2">
+                        {el.kdJenis}
+                      </td>
+                      <td className=" border-2 border-black p-2">
+                        {el.nmJenis}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  printData.map((el, id) => (
+                    <tr key={id}>
+                      <td className=" border-2 border-black p-2">{id + 1}</td>
+                      <td className=" border-2 border-black p-2">
+                        {el.kodeBuku}
+                      </td>
+                      <td className=" border-2 border-black p-2">{el.judul}</td>
+                      <td className=" border-2 border-black p-2">
+                        {el.pengarang}
+                      </td>
+                      <td className=" border-2 border-black p-2">
+                        {el.penerbit}
+                      </td>
+                      <td className=" border-2 border-black p-2">
+                        {
+                          data?.filter((er) => er.kdJenis === el.kodeJenis)[0]
+                            ?.nmJenis
+                        }
+                      </td>
+                      <td className=" border-2 border-black p-2">
+                        {el.jumlahBuku}
+                      </td>
+                      <td className=" border-2 border-black p-2">{el.harga}</td>
+                      <td className=" border-2 border-black p-2">
+                        {el.deskripsi}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            }
+          </table>
+        </div>
       </TemplatePr>
     );
   };
 
   const renderList = {
     0: initialRender,
-    1: pr1,
-    2: pr2,
-    3: pr3,
-    4: pr4,
-    5: pr5,
-    6: pr6,
-    7: pr7,
-    8: pr8,
+    1: Pr1,
+    2: Pr2,
+    3: Pr3,
   };
 
   return (
     <div className="container mx-auto p-5">
-      <div className="text-center mb-5 flex">
+      <div className="text-center mb-5 flex  print:hidden">
         <h1 className=" font-bold text-3xl py-1 px-3 rounded-md -rotate-6 bg-red-600 text-white">
           .NET
         </h1>
@@ -713,7 +835,7 @@ function App() {
         </h1>
       </div>
       {renderList[display]()}
-      <div className="mt-5">
+      <div className="mt-5 print:hidden">
         <p>
           Built with joy by{" "}
           <a
@@ -723,39 +845,6 @@ function App() {
             Awal Ariansyah
           </a>
         </p>
-      </div>
-      {modal && openModal(modalcontent)}
-    </div>
-  );
-}
-
-function popUp(title, content, close) {
-  return (
-    <div id="myModal" className="fixed top-0 left-0 right-0 w-full h-full">
-      <div className="container mx-auto mt-5">
-        <div className="border-[1px] border-gray-200 p-3 shadow-lg relative flex flex-col w-full pointer-events-auto bg-white bg-clip-padding rounded-md outline-none text-current">
-          <div className="flex border-b-2 border-b-gray-100">
-            <h2 className="flex-1 text-xl font-bold">{title}</h2>
-            <span
-              className="text-xl py-1 px-3 hover:bg-red-300 cursor-pointer bg-red-100 rounded-full"
-              onClick={() => close()}
-            >
-              &times;
-            </span>
-          </div>
-          <div className="container mx-auto text-center py-2">
-            {content &&
-              content.split("\n").map((el, id) => <p key={id}>{el}</p>)}
-          </div>
-          <div className="flex justify-center">
-            <button
-              className="w-[50%] bg-red-100 py-2 hover:bg-red-300 rounded-md"
-              onClick={() => close()}
-            >
-              OK
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
